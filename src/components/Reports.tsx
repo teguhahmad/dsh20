@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { BarChart3, Download, Calendar, Filter, Search, ChevronDown, Check } from 'lucide-react';
+import { BarChart3, Download, Calendar, Filter, Search, ChevronDown, Check, User } from 'lucide-react';
 import { Account, SalesData, Category } from '../types';
 
 interface DateFilter {
@@ -138,6 +138,47 @@ const Reports: React.FC<ReportsProps> = ({ accounts, salesData, categories, date
       avgCommissionRate: totalRevenue > 0 ? (totalCommission / totalRevenue) * 100 : 0,
       conversionRate: totalClicks > 0 ? (totalOrders / totalClicks) * 100 : 0,
     };
+  }, [filteredData]);
+
+  // Calculate accumulated data per account
+  const accumulatedData = useMemo(() => {
+    const accountData = new Map();
+    
+    filteredData.forEach(data => {
+      if (!accountData.has(data.account_id)) {
+        accountData.set(data.account_id, {
+          account_id: data.account_id,
+          clicks: 0,
+          orders: 0,
+          gross_commission: 0,
+          products_sold: 0,
+          total_purchases: 0,
+          new_buyers: 0,
+          data_count: 0,
+          date_range: { start: data.date, end: data.date }
+        });
+      }
+      
+      const accumulated = accountData.get(data.account_id);
+      accumulated.clicks += data.clicks;
+      accumulated.orders += data.orders;
+      accumulated.gross_commission += data.gross_commission;
+      accumulated.products_sold += data.products_sold;
+      accumulated.total_purchases += data.total_purchases;
+      accumulated.new_buyers += data.new_buyers;
+      accumulated.data_count += 1;
+      
+      // Update date range
+      if (data.date < accumulated.date_range.start) {
+        accumulated.date_range.start = data.date;
+      }
+      if (data.date > accumulated.date_range.end) {
+        accumulated.date_range.end = data.date;
+      }
+    });
+    
+    return Array.from(accountData.values())
+      .sort((a, b) => b.gross_commission - a.gross_commission); // Sort by commission descending
   }, [filteredData]);
 
   const formatCurrency = (amount: number) => {
@@ -381,68 +422,96 @@ const Reports: React.FC<ReportsProps> = ({ accounts, salesData, categories, date
         </div>
       </div>
 
-      {/* Data Table */}
+      {/* Accumulated Data Table */}
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
         <div className="p-6 border-b border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-900">Daily Performance Data</h3>
+          <h3 className="text-lg font-semibold text-gray-900">Akumulasi Data</h3>
+          <p className="text-sm text-gray-600 mt-1">
+            Data penjualan terakumulasi per akun berdasarkan periode yang dipilih
+          </p>
         </div>
         
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Account</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Clicks</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Orders</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Commission</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Revenue</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Period</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Clicks</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Orders</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Commission</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Revenue</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Products Sold</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Conv. Rate</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredData
-                .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                .slice(0, 50)
-                .map((data, index) => {
-                  const account = filteredAccountsByRole.find(acc => acc.id === data.account_id);
-                  const convRate = data.clicks > 0 ? (data.orders / data.clicks) * 100 : 0;
-                  
-                  return (
-                    <tr key={`${data.account_id}-${data.date}-${index}`} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {new Date(data.date).toLocaleDateString('id-ID')}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{account?.username}</div>
-                        <div className="text-sm text-gray-500">{account?.account_code}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {data.clicks.toLocaleString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {data.orders.toLocaleString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
-                        {formatCurrency(data.gross_commission)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {formatCurrency(data.total_purchases)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {convRate.toFixed(2)}%
-                      </td>
-                    </tr>
-                  );
-                })}
+              {accumulatedData.map((data, index) => {
+                const account = filteredAccountsByRole.find(acc => acc.id === data.account_id);
+                const convRate = data.clicks > 0 ? (data.orders / data.clicks) * 100 : 0;
+                const commissionRate = data.total_purchases > 0 ? (data.gross_commission / data.total_purchases) * 100 : 0;
+                
+                return (
+                  <tr key={`${data.account_id}-${index}`} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="w-8 h-8 bg-gradient-to-br from-blue-100 to-purple-100 rounded-lg flex items-center justify-center mr-3">
+                          <User className="w-4 h-4 text-purple-600" />
+                        </div>
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">{account?.username}</div>
+                          <div className="text-sm text-gray-500">{account?.account_code}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">
+                        {data.date_range.start === data.date_range.end 
+                          ? new Date(data.date_range.start).toLocaleDateString('id-ID')
+                          : `${new Date(data.date_range.start).toLocaleDateString('id-ID')} - ${new Date(data.date_range.end).toLocaleDateString('id-ID')}`
+                        }
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {data.data_count} hari data
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {data.clicks.toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {data.orders.toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
+                      {formatCurrency(data.gross_commission)}
+                      <div className="text-xs text-gray-500 font-normal">
+                        {commissionRate.toFixed(2)}% rate
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {formatCurrency(data.total_purchases)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {data.products_sold.toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {convRate.toFixed(2)}%
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
           
-          {filteredData.length === 0 && (
+          {accumulatedData.length === 0 && (
             <div className="text-center py-12">
               <BarChart3 className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No data found</h3>
-              <p className="text-gray-600">Try adjusting your filters or upload some sales data</p>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Tidak ada data penjualan</h3>
+              <p className="text-gray-600">
+                {selectedAccount === 'all' 
+                  ? 'Tidak ada akun yang memiliki data penjualan pada periode yang dipilih'
+                  : 'Akun yang dipilih tidak memiliki data penjualan pada periode yang dipilih'
+                }
+              </p>
             </div>
           )}
         </div>
