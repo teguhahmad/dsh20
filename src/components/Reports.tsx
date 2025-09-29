@@ -441,6 +441,7 @@ const Reports: React.FC<ReportsProps> = ({ accounts, salesData, categories, date
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Orders</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Commission</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Revenue</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Commission %</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Products Sold</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Conv. Rate</th>
               </tr>
@@ -483,12 +484,12 @@ const Reports: React.FC<ReportsProps> = ({ accounts, salesData, categories, date
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
                       {formatCurrency(data.gross_commission)}
-                      <div className="text-xs text-gray-500 font-normal">
-                        {commissionRate.toFixed(2)}% rate
-                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {formatCurrency(data.total_purchases)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-purple-600">
+                      {commissionRate.toFixed(2)}%
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {data.products_sold.toLocaleString()}
