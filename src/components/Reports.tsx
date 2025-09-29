@@ -190,28 +190,40 @@ const Reports: React.FC<ReportsProps> = ({ accounts, salesData, categories, date
   };
 
   const exportToCSV = () => {
+    // Use accumulated data that matches the web display
     const headers = [
-      'Date',
       'Account',
-      'Clicks',
-      'Orders',
-      'Gross Commission (IDR)',
+      'Account Code',
+      'Period',
+      'Data Days',
+      'Total Clicks',
+      'Total Orders',
+      'Total Commission (IDR)',
+      'Total Revenue (IDR)',
+      'Commission %',
       'Products Sold',
-      'Total Purchases (IDR)',
-      'New Buyers'
+      'Conversion Rate %'
     ];
 
-    const csvData = filteredData.map(data => {
-      const account = accounts.find(acc => acc.id === data.account_id);
+    const csvData = accumulatedData.map(data => {
+      const account = filteredAccountsByRole.find(acc => acc.id === data.account_id);
+      const convRate = data.clicks > 0 ? (data.orders / data.clicks) * 100 : 0;
+      const commissionRate = data.total_purchases > 0 ? (data.gross_commission / data.total_purchases) * 100 : 0;
+      
       return [
-        data.date,
         account?.username || 'Unknown',
+        account?.account_code || 'Unknown',
+        data.date_range.start === data.date_range.end 
+          ? new Date(data.date_range.start).toLocaleDateString('id-ID')
+          : `${new Date(data.date_range.start).toLocaleDateString('id-ID')} - ${new Date(data.date_range.end).toLocaleDateString('id-ID')}`,
+        data.data_count,
         data.clicks,
         data.orders,
         data.gross_commission,
-        data.products_sold,
         data.total_purchases,
-        data.new_buyers
+        commissionRate.toFixed(2),
+        data.products_sold,
+        convRate.toFixed(2)
       ];
     });
 
@@ -223,7 +235,7 @@ const Reports: React.FC<ReportsProps> = ({ accounts, salesData, categories, date
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `sales-report-${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `accumulated-sales-report-${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
   };
